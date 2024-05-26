@@ -1,0 +1,221 @@
+import tkinter as tk
+from tkinter import ttk
+from tkcalendar import DateEntry
+from datetime import datetime
+
+def calculate_transfer_fee():
+    try:
+        sale_price = float(price_entry.get())
+    except ValueError:
+        result_label.config(text="กรุณาป้อนราคาเสนอขายที่เป็นตัวเลข")
+        return 0
+    if sale_price < 7000000:
+        transfer_fee_rate = 0.0001
+    else:
+        transfer_fee_rate = 0.02
+    transfer_fee = sale_price * transfer_fee_rate
+    return transfer_fee
+
+def calculate_mortgage_fee():
+    try:
+        mortgage_cost = float(mortgage_entry.get())
+    except ValueError:
+        result_label.config(text="กรุณาป้อนมูลค่าจำนองที่เป็นตัวเลข")
+        return 0
+    if mortgage_cost < 7000000:
+        mortgage_fee_rate = 0.0001
+    else:
+        mortgage_fee_rate = 0.01
+    mortgage_fee = mortgage_cost * mortgage_fee_rate
+    return mortgage_fee
+
+def calculate_duration():
+    try:
+        owned_st_date = datetime.strptime(own_start_date_entry.get(), '%d/%m/%Y')
+        owned_end_date = datetime.strptime(own_end_date_entry.get(), '%d/%m/%Y')
+        res_st_date = datetime.strptime(residence_start_date_entry.get(), '%d/%m/%Y')
+        res_end_date = datetime.strptime(residence_end_date_entry.get(), '%d/%m/%Y')
+    except ValueError:
+        result_label.config(text="กรุณาป้อนวันที่ที่ถูกต้อง")
+        return 0, 0
+
+    days_owned = int(owned_end_date.year - owned_st_date.year)
+    years_owned = days_owned + 1
+
+    days_resided = (res_end_date - res_st_date).days
+    res_owned = int(days_resided // 365)
+
+    return res_owned, years_owned
+
+def calculate_income(years_owned):
+    try:
+        estimate_price = float(sqm_price_entry.get()) * float(sqm_entry.get())
+    except ValueError:
+        result_label.config(text="กรุณาป้อนราคาต่อตารางเมตรและตารางเมตรที่เป็นตัวเลข")
+        return 0
+
+    if years_owned <= 0:
+        years_owned = 1
+
+    if years_owned == 1:
+        tax_deduction = 0.92
+    elif years_owned == 2:
+        tax_deduction = 0.84
+    elif years_owned == 3:
+        tax_deduction = 0.77
+    elif years_owned == 4:
+        tax_deduction = 0.71
+    elif years_owned == 5:
+        tax_deduction = 0.65
+    elif years_owned == 6:
+        tax_deduction = 0.60
+    elif years_owned == 7:
+        tax_deduction = 0.55
+    else:  # years_owned >= 8
+        tax_deduction = 0.50
+
+    income = (estimate_price - (estimate_price * tax_deduction)) / years_owned
+    return income
+
+def calculate_personal_taxs(income, years_owned):
+    try:
+        owned_st_date = datetime.strptime(own_start_date_entry.get(), '%d/%m/%Y')
+        owned_end_date = datetime.strptime(own_end_date_entry.get(), '%d/%m/%Y')
+        days_owned = int(owned_end_date.year - owned_st_date.year)
+        years_owned = days_owned + 1
+
+        if income <= 100000:
+            personal_taxs = income * 0.05
+        elif income <= 500000:
+            personal_taxs = 100000 * 0.05 + (income - 100000) * 0.10
+        elif income <= 1000000:
+            personal_taxs = 100000 * 0.05 + 400000 * 0.10 + (income - 500000) * 0.20
+        elif income <= 4000000:
+            personal_taxs = 100000 * 0.05 + 400000 * 0.10 + 500000 * 0.20 + (income - 1000000) * 0.30
+        else:
+            personal_taxs = 100000 * 0.05 + 400000 * 0.10 + 500000 * 0.20 + 3000000 * 0.30 + (income - 4000000) * 0.37
+
+        final_taxs = personal_taxs * years_owned
+        return final_taxs
+
+    except  ValueError:
+        result_label.config(text="กรุณาป้อนราคาต่อตารางเมตรและตารางเมตรที่เป็นตัวเลข")
+        return 0
+
+def calculate_business_taxs(sale_price, estimate_price):
+    if sale_price <= estimate_price:
+        business_taxs = estimate_price * 0.033
+    else:
+        business_taxs = sale_price * 0.033
+    return business_taxs
+
+def calculate_local_taxs(sale_price, estimate_price):
+    if sale_price <= estimate_price:
+        local_taxs = estimate_price * 0.005
+    else:
+        local_taxs = sale_price * 0.005
+    return local_taxs
+
+def on_calculate():
+    try:
+        sale_price = float(price_entry.get())
+        estimate_price = float(sqm_price_entry.get()) * float(sqm_entry.get())
+    except ValueError:
+        result_label.config(text="กรุณาป้อนข้อมูลที่ถูกต้อง")
+        return
+    try:
+        owned_st_date = datetime.strptime(own_start_date_entry.get(), '%d/%m/%Y')
+        owned_end_date = datetime.strptime(own_end_date_entry.get(), '%d/%m/%Y')
+        res_st_date = datetime.strptime(residence_start_date_entry.get(), '%d/%m/%Y')
+        res_end_date = datetime.strptime(residence_end_date_entry.get(), '%d/%m/%Y')
+
+        days_owned = int(owned_end_date.year - owned_st_date.year)
+        years_owned = days_owned + 1
+
+        days_resided = (res_end_date - res_st_date).days
+        res_owned = int(days_resided // 365)
+
+    except ValueError:
+        result_label.config(text="กรุณาป้อนข้อมูลที่ถูกต้อง")
+        return
+
+    transfer_fee = calculate_transfer_fee()
+    mortgage_fee = calculate_mortgage_fee()
+    income = calculate_income(years_owned)
+    final_taxs = calculate_personal_taxs(income, years_owned)
+    business_taxs = calculate_business_taxs(sale_price, estimate_price)
+    local_taxs = calculate_local_taxs(sale_price, estimate_price)
+
+    try:
+        if years_owned >= 5 or res_owned >= 1:
+            result_cost = transfer_fee + mortgage_fee + final_taxs + local_taxs
+        elif years_owned <= 4:
+            result_cost = transfer_fee + mortgage_fee + final_taxs + business_taxs
+
+        result_label.config(text=f"ค่าใช้จ่ายวันโอน ณ กรมที่ดินทั้งหมด: {result_cost:.2f} บาท")
+
+        if result_cost == transfer_fee + mortgage_fee + final_taxs + local_taxs:
+            detail_label.config(text=f"ค่าธรรมเนียมการโอน: {transfer_fee:.2f} บาท\n"
+                                 f"ค่าธรรมเนียมจดจำนอง: {mortgage_fee:.2f} บาท\n"
+                                 f"ภาษีธุรกิจเฉพาะ: {0:.2f} บาท\n"
+                                 f"อากรแสตมป์: {local_taxs:.2f} บาท\n"
+                                 f"ภาษีเงินได้บุคคลธรรมดา: {final_taxs:.2f} บาท")
+        elif result_cost == transfer_fee + mortgage_fee + final_taxs + business_taxs:
+            detail_label.config(text=f"ค่าธรรมเนียมการโอน: {transfer_fee:.2f} บาท\n"
+                                 f"ค่าธรรมเนียมจดจำนอง: {mortgage_fee:.2f} บาท\n"
+                                 f"ภาษีธุรกิจเฉพาะ: {business_taxs:.2f} บาท\n"
+                                 f"อากรแสตมป์: {0:.2f} บาท\n"
+                                 f"ภาษีเงินได้บุคคลธรรมดา: {final_taxs:.2f} บาท")
+
+    except ValueError:
+        result_label.config(text="กรุณาป้อนข้อมูลที่ถูกต้อง")
+        detail_label.config(text="")
+
+root = tk.Tk()
+root.title("คำนวณค่าใช้จ่ายในการโอน ณ กรมที่ดิน")
+
+mainframe = ttk.Frame(root, padding="10")
+mainframe.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+ttk.Label(mainframe, text="ราคาเสนอขาย (บาท):").grid(row=1, column=1, sticky=tk.W)
+price_entry = ttk.Entry(mainframe, width=20)
+price_entry.grid(row=1, column=2, sticky=(tk.W, tk.E))
+
+mortgage_entry = ttk.Entry(mainframe, width=20)
+mortgage_entry.grid(row=2, column=2, sticky=(tk.W, tk.E))
+ttk.Label(mainframe, text="มูลค่าจำนอง (บาท):").grid(row=2, column=1, sticky=tk.W)
+
+ttk.Label(mainframe, text="ราคาต่อตารางเมตร:").grid(row=3, column=1, sticky=tk.W)
+sqm_price_entry = ttk.Entry(mainframe, width=20)
+sqm_price_entry.grid(row=3, column=2, sticky=(tk.W, tk.E))
+
+ttk.Label(mainframe, text="ตารางเมตร (ตรม.):").grid(row=4, column=1, sticky=tk.W)
+sqm_entry = ttk.Entry(mainframe, width=20)
+sqm_entry.grid(row=4, column=2, sticky=(tk.W, tk.E))
+
+ttk.Label(mainframe, text="วันที่เริ่มถือครอง:").grid(row=5, column=1, sticky=tk.W)
+own_start_date_entry = DateEntry(mainframe, date_pattern='dd/MM/yyyy')
+own_start_date_entry.grid(row=5, column=2, sticky=(tk.W, tk.E))
+
+ttk.Label(mainframe, text="วันที่สิ้นสุดการถือครอง:").grid(row=6, column=1, sticky=tk.W)
+own_end_date_entry = DateEntry(mainframe, date_pattern='dd/MM/yyyy')
+own_end_date_entry.grid(row=6, column=2, sticky=(tk.W, tk.E))
+
+ttk.Label(mainframe, text="วันที่เริ่มมีชื่อในทะเบียนบ้าน:").grid(row=7, column=1, sticky=tk.W)
+residence_start_date_entry = DateEntry(mainframe, date_pattern='dd/MM/yyyy')
+residence_start_date_entry.grid(row=7, column=2, sticky=(tk.W, tk.E))
+
+ttk.Label(mainframe, text="วันที่สิ้นสุดการมีชื่อในทะเบียนบ้าน:").grid(row=8, column=1, sticky=tk.W)
+residence_end_date_entry = DateEntry(mainframe, date_pattern='dd/MM/yyyy')
+residence_end_date_entry.grid(row=8, column=2, sticky=(tk.W, tk.E))
+
+calculate_button = ttk.Button(mainframe, text="คำนวณ", command=on_calculate)
+calculate_button.grid(row=9, column=2, sticky=tk.E)
+
+result_label = ttk.Label(mainframe, text="ค่าใช้จ่ายวันโอน ณ กรมที่ดินทั้งหมด:")
+result_label.grid(row=10, column=1, columnspan=2, sticky=(tk.W, tk.E))
+
+detail_label = ttk.Label(mainframe, text="", justify=tk.LEFT)
+detail_label.grid(row=11, column=1, columnspan=2, sticky=(tk.W, tk.E))
+
+root.mainloop()
